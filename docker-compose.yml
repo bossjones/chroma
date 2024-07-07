@@ -15,9 +15,10 @@ services:
       # Default configuration for persist_directory in chromadb/config.py
       # Read more about deployments: https://docs.trychroma.com/deployment
       - chroma-data:/chroma/chroma
-    command: "--workers 1 --host 0.0.0.0 --port 8000 --proxy-headers --log-config chromadb/log_config.yml --timeout-keep-alive 30"
+    command: "--workers 1 --host 0.0.0.0 --port 8010 --proxy-headers --log-config chromadb/log_config.yml --timeout-keep-alive 30"
     environment:
       - IS_PERSISTENT=TRUE
+      - ALLOW_RESET=TRUE
       - CHROMA_SERVER_AUTHN_PROVIDER=${CHROMA_SERVER_AUTHN_PROVIDER}
       - CHROMA_SERVER_AUTHN_CREDENTIALS_FILE=${CHROMA_SERVER_AUTHN_CREDENTIALS_FILE}
       - CHROMA_SERVER_AUTHN_CREDENTIALS=${CHROMA_SERVER_AUTHN_CREDENTIALS}
@@ -30,15 +31,31 @@ services:
       - CHROMA_SERVER_NOFILE=${CHROMA_SERVER_NOFILE}
     restart: unless-stopped # possible values are: "no", always", "on-failure", "unless-stopped"
     ports:
-      - "8000:8000"
+      - "8010:8010"
     healthcheck:
       # Adjust below to match your container port
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8010/api/v1/heartbeat" ]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
       - net
+
+  # NOTE: Use http://host.docker.internal:8010 to access the server from the admin container
+  chromadb-admin:
+    image: "fengzhichao/chromadb-admin:latest"
+    # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
+    # hostname: 'chromadb-admin'
+    ports:
+      - "3000:3000/tcp"
+    container_name: chromadb-admin
+    expose:
+    - 3000
+    restart: unless-stopped
+    networks:
+    - net
+    depends_on:
+    - server
 
 volumes:
   chroma-data:
