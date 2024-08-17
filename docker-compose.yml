@@ -5,6 +5,23 @@ networks:
     driver: bridge
 
 services:
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411" # you can access Zipkin UI at http://localhost:9411
+    depends_on: [otel-collector]
+    networks:
+      - net
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ${PWD}/examples/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"  # OTLP
+      - "55681:55681" # Legacy
+    networks:
+      - net
   server:
     image: server
     build:
@@ -24,12 +41,18 @@ services:
       - CHROMA_SERVER_AUTHN_CREDENTIALS=${CHROMA_SERVER_AUTHN_CREDENTIALS}
       - CHROMA_AUTH_TOKEN_TRANSPORT_HEADER=${CHROMA_AUTH_TOKEN_TRANSPORT_HEADER}
       - PERSIST_DIRECTORY=${PERSIST_DIRECTORY:-/chroma/chroma}
-      - CHROMA_OTEL_EXPORTER_ENDPOINT=${CHROMA_OTEL_EXPORTER_ENDPOINT}
+      - CHROMA_OTEL_COLLECTION_ENDPOINT=http://otel-collector:4317/
       - CHROMA_OTEL_EXPORTER_HEADERS=${CHROMA_OTEL_EXPORTER_HEADERS}
-      - CHROMA_OTEL_SERVICE_NAME=${CHROMA_OTEL_SERVICE_NAME}
-      - CHROMA_OTEL_GRANULARITY=${CHROMA_OTEL_GRANULARITY}
+      - CHROMA_OTEL_SERVICE_NAME=${CHROMA_OTEL_SERVICE_NAME:-chroma}
+      - CHROMA_OTEL_GRANULARITY=${CHROMA_OTEL_GRANULARITY:-all}
+
+      # - CHROMA_OTEL_EXPORTER_ENDPOINT=${CHROMA_OTEL_EXPORTER_ENDPOINT}
+      # - CHROMA_OTEL_EXPORTER_HEADERS=${CHROMA_OTEL_EXPORTER_HEADERS}
+      # - CHROMA_OTEL_SERVICE_NAME=${CHROMA_OTEL_SERVICE_NAME}
+      # - CHROMA_OTEL_GRANULARITY=${CHROMA_OTEL_GRANULARITY}
       - CHROMA_SERVER_NOFILE=${CHROMA_SERVER_NOFILE}
     restart: unless-stopped # possible values are: "no", always", "on-failure", "unless-stopped"
+    depends_on: [otel-collector]
     ports:
       - "8010:8010"
     healthcheck:
