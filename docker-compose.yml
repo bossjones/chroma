@@ -10,6 +10,43 @@ networks:
     driver: bridge
 
 services:
+
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - 5433:5432
+    volumes:
+      - postgres-vector-admin-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: vectoradmin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: vdbms
+    networks:
+      - net
+    logging: *logging
+
+  # vector-admin:
+  #   container_name: vector-admin
+  #   image: mintplexlabs/vectoradmin:latest
+  #   # build:
+  #   #   context: ../.
+  #   #   dockerfile: ./docker/Dockerfile
+  #   volumes:
+  #     - "./.env:/app/backend/.env"
+  #     - "./backend/storage:/app/backend/storage"
+  #     - "./document-processor/hotdir/:/app/document-processor/hotdir"
+  #   ports:
+  #     - "3001:3001"
+  #     - "3355:3355"
+  #     - "8288:8288"
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - net
+  #   depends_on:
+  #     - postgres
+  #   logging: *logging
+
   zipkin:
     image: openzipkin/zipkin
     ports:
@@ -240,3 +277,4 @@ services:
 volumes:
   chroma-data:
     driver: local
+  postgres-vector-admin-data:
