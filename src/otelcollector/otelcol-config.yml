@@ -1,15 +1,18 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: "0.0.0.0:4317"
       http:
-        endpoint: "0.0.0.0:4318"
         cors:
           allowed_origins:
             - "http://*"
             - "https://*"
-
+  httpcheck/frontendproxy:
+    targets:
+      - endpoint: http://frontendproxy:${env:ENVOY_PORT}
   docker_stats:
     endpoint: unix:///var/run/docker.sock
   redis:
@@ -35,9 +38,12 @@ exporters:
     endpoint: "http://prometheus:9090/api/v1/otlp"
     tls:
       insecure: true
-  logging:
-  zipkin:
-    endpoint: "http://zipkin:9411/api/v2/spans"
+  opensearch:
+    logs_index: otel
+    http:
+      endpoint: "http://opensearch:9200"
+      tls:
+        insecure: true
 
 processors:
   batch:
@@ -50,12 +56,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, debug, spanmetrics, zipkin]
+      exporters: [otlp, debug, spanmetrics]
     metrics:
-      receivers: [otlp, prometheus, redis, spanmetrics]
+      receivers: [docker_stats, httpcheck/frontendproxy, otlp, prometheus, redis, spanmetrics]
       processors: [batch]
       exporters: [otlphttp/prometheus, debug]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [opensearch, debug]

@@ -26,7 +26,6 @@ server.authn
 
 .venv
 venv
-.env
 .chroma
 *.egg-info
 dist
